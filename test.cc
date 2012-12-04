@@ -28,7 +28,6 @@
 
 #include "MitStyleRemix.h"
 #include "EtaPdf.h"
-#include "Util.h"
 #include "Simulator.h"
 
 float unit;
@@ -42,9 +41,13 @@ int main(int argc, char** argv)
   gPad->SetBottomMargin(.15);
   SetStyle();
 
-  Simulator sim(0,5);
-  sim.generateThetaVals(sim.getNTracks());
-  sim.plotTheta();
+  Simulator sim(0,5,0,1);
+  sim.generate(sim.getNTracks());
 
-  can.SaveAs("$HOME/www/foo.png");
+  TString plotDir(".");
+  sim.plotZ();
+  can.SaveAs(plotDir+"/z.png");
+
+  sim.plotTheta();
+  can.SaveAs(plotDir+"/theta.png");
 }

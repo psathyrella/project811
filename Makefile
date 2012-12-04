@@ -10,10 +10,10 @@ all : obj exe
 exe : $(EXE)
 obj : $(OBJ)
 
-MitStyleRemix.o : MitStyleRemix.cc
+MitStyleRemix.o : MitStyleRemix.cc MitStyleRemix.h
 	$(CC) $(CCFLAGS) -c MitStyleRemix.cc -o MitStyleRemix.o $(LDFLAGS)
 
-Simulator.o : Simulator.cc
+Simulator.o : Simulator.cc Simulator.h
 	$(CC) $(CCFLAGS) -c Simulator.cc -o Simulator.o $(LDFLAGS)
 
 EtaPdf_cc.so : EtaPdf.cc EtaPdf.h
@@ -22,7 +22,7 @@ EtaPdf_cc.so : EtaPdf.cc EtaPdf.h
 #%.o : %.cc
 #	$(CC) $(CCFLAGS) -c $< -o $@ $(LDFLAGS)
 
-%.exe : %.cc MitStyleRemix.o EtaPdf_cc.so Util.h Simulator.o
+%.exe : %.cc MitStyleRemix.o EtaPdf_cc.so Simulator.o
 	$(CC) $(CCFLAGS) -Wl,-rpath=$(PWD) $< -o $@ $(LDFLAGS) MitStyleRemix.o EtaPdf_cc.so Simulator.o
 
 clean :

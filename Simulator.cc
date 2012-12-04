@@ -1,10 +1,21 @@
 #include "Simulator.h"
 
 //----------------------------------------------------------------------------------------
-Simulator::Simulator(float etaMinVal, float etaMaxVal)
+Track::Track(float pt, float eta, float phi, float mass, float dzVal)
 {
+  vec.SetPtEtaPhiM(pt,eta,phi,mass);
+  dz = dzVal;
+}
+//----------------------------------------------------------------------------------------
+Simulator::Simulator(float etaMinVal, float etaMaxVal, float phiMinVal, float phiMaxVal)
+{
+  event = new Event;
+  
   etaMin = etaMinVal;
   etaMax = etaMaxVal;
+  phiMin = phiMinVal;
+  phiMax = phiMaxVal;
+
   zVar  = new RooRealVar("zVar","zVar",-20,20);
   zSig  = new RooRealVar("zSig","zSig",5);
   zGaus = new RooGaussian("zGaus","zGaus",*zVar,RooConst(0),*zSig);
@@ -22,6 +33,8 @@ Simulator::~Simulator()
   delete zVar;
   delete zSig;
   delete zGaus;
+  delete thetaVar;
+  delete etaPdf;
 }
 //----------------------------------------------------------------------------------------
 void Simulator::generateZVals(int n)
@@ -42,6 +55,14 @@ void Simulator::generateThetaVals(int n)
     thetaVals.push_back(val);
   }
   sort(thetaVals.begin(), thetaVals.end());
+}
+//----------------------------------------------------------------------------------------
+void Simulator::generatePhiVals(int n)
+{
+  TRandom rand;
+  for(unsigned iphi=0; iphi<n; iphi++) {
+    phiVals.push_back(rand.Uniform(phiMin,phiMax));
+  }
 }
 //----------------------------------------------------------------------------------------
 void Simulator::plotZ()
@@ -71,4 +92,20 @@ int Simulator::getNTracks()
 float Simulator::theta(float eta)
 {
   return 2*atan(pow(e,-eta));
+}
+//----------------------------------------------------------------------------------------
+float Simulator::eta(float theta)
+{
+  return -log(tan(theta/2));
+}
+//----------------------------------------------------------------------------------------
+void Simulator::generate(int n)
+{
+  generateZVals(n);
+  generateThetaVals(n);
+  generatePhiVals(n);
+  
+  for(unsigned itrk=0; itrk<n; itrk++) {
+    event->tracks.push_back(Track(5, eta(thetaVals[itrk]), phiVals[itrk], 0, zVals[itrk]));
+  }
 }
