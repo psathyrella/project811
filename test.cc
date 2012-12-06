@@ -29,6 +29,7 @@
 #include "MitStyleRemix.h"
 #include "EtaPdf.h"
 #include "Simulator.h"
+#include "Detector.h"
 
 float unit;
 using namespace std;
@@ -36,18 +37,30 @@ using namespace RooFit;
 //----------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
+  RooRandom::randomGenerator()->SetSeed(getpid());
+
   TCanvas can("can","",900,700);
   gPad->SetLeftMargin(.15);
   gPad->SetBottomMargin(.15);
   SetStyle();
 
-  Simulator sim(0,5,0,1);
-  sim.generate(sim.getNTracks());
+  Simulator sim(2.5,5,0,.5);
+  // sim.generate(sim.getNTracks());
+  sim.generate(20);
+  // sim.readHiFile("output_test.root",5);
 
-  TString plotDir(".");
-  sim.plotZ();
-  can.SaveAs(plotDir+"/z.png");
+  Detector trk("tracker.txt");
+  Detector tof("tof.txt");
+  for(unsigned itrk=0; itrk<sim.event->tracks.size(); itrk++) {
+    trk.propagateTrack(sim.event->tracks[itrk]);
+    tof.propagateTrack(sim.event->tracks[itrk]);
+  }
 
-  sim.plotTheta();
-  can.SaveAs(plotDir+"/theta.png");
+  cout << "drawing" << endl;
+  // TH3F hist("hist",";z [cm];x [cm];y [cm]",100,0,200,100,0*cos(0),20*cos(0.5),100,0*sin(0),20*sin(0.5));
+  // hist.Draw();
+  trk.draw3d(&sim.event->tracks,0,200,0,20);
+  tof.draw3d(&sim.event->tracks,0,200,0,20,"same");
+  can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png");
+
 }

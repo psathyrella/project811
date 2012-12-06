@@ -1,9 +1,9 @@
 # in cm
-$ r   1  10
-$ phi 0  1.3
-$ z   10 50
+$ r   .3  4
+$ phi 0  0.5
+$ z   10 60
 #     dR  dS  dZ # note: dS = r*dPhi
-delta 1   5   10
+delta .1   .1   15
 #number 10   10   10
 # r   phi    z
 #1.1   0.8    15

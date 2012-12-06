@@ -1,0 +1,11 @@
+# in cm
+$ r   6 19
+$ phi 0  0.5
+$ z   100 200
+#     dR  dS  dZ # note: dS = r*dPhi
+#delta .3   .3   75
+delta .3   .3   -1
+# if it's -1 above for this variable, read the layers from the lines below
+z 75
+#     color 
+style  823

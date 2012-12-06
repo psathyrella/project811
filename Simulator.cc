@@ -7,6 +7,17 @@ Track::Track(float pt, float eta, float phi, float mass, float dzVal)
   dz = dzVal;
 }
 //----------------------------------------------------------------------------------------
+void Track::dump()
+{
+  cout
+    << setw(12) << vec.Pt()
+    << setw(12) << vec.Eta()
+    << setw(12) << vec.Phi()
+    << setw(12) << vec.M()
+    << setw(12) << dz
+    << endl;
+}
+//----------------------------------------------------------------------------------------
 Simulator::Simulator(float etaMinVal, float etaMaxVal, float phiMinVal, float phiMaxVal)
 {
   event = new Event;
@@ -17,7 +28,7 @@ Simulator::Simulator(float etaMinVal, float etaMaxVal, float phiMinVal, float ph
   phiMax = phiMaxVal;
 
   zVar  = new RooRealVar("zVar","zVar",-20,20);
-  zSig  = new RooRealVar("zSig","zSig",5);
+  zSig  = new RooRealVar("zSig","zSig",3);
   zGaus = new RooGaussian("zGaus","zGaus",*zVar,RooConst(0),*zSig);
   thetaVar = new RooRealVar("thetaVar","thetaVar",theta(etaMax),theta(etaMin));
   thetaVar->Print();
@@ -107,5 +118,38 @@ void Simulator::generate(int n)
   
   for(unsigned itrk=0; itrk<n; itrk++) {
     event->tracks.push_back(Track(5, eta(thetaVals[itrk]), phiVals[itrk], 0, zVals[itrk]));
+  }
+}
+//----------------------------------------------------------------------------------------
+void Simulator::readHiFile(TString fname, int n)
+{
+  // gROOT->Macro("hi.C");
+  TFile file(fname);
+  file.cd("ana");
+  TTree *tree = (TTree*)file.Get("hi");
+  hi *lyzer = new hi(tree);
+
+  int nMax = min(lyzer->fChain->GetEntriesFast(),Long64_t(n));
+  for (Long64_t jentry=0; jentry<nMax;jentry++) {
+    Long64_t ientry = lyzer->LoadTree(jentry);
+    if (ientry < 0) break;
+    lyzer->fChain->GetEntry(jentry);
+
+    for(unsigned ipart=0; ipart<lyzer->npart; ipart++) {
+      cout << lyzer->eta[ipart] << setw(12) << lyzer->phi[ipart] << endl;
+      thetaVals.push_back(theta(lyzer->eta[ipart]));
+      phiVals.push_back(lyzer->phi[ipart]);
+      if(thetaVals.size() >= nMax) break;
+    }
+    if(thetaVals.size() >= nMax) break;
+  }
+  // sort(zVals.begin(), zVals.end()); // no z vals in the tree yet
+  generateZVals(thetaVals.size());
+  sort(thetaVals.begin(), thetaVals.end());
+  sort(phiVals.begin(), phiVals.end());
+  for(unsigned itrk=0; itrk<nMax; itrk++) {
+    event->tracks.push_back(Track(5, eta(thetaVals[itrk]), phiVals[itrk], 0, zVals[itrk]));
+    cout << "pushing track: ";
+    event->tracks.back().dump();
   }
 }

@@ -32,6 +32,7 @@
 #include "RooConstVar.h"
 
 #include "EtaPdf.h"
+#include "hi.h"
 
 #define e 2.71828182846
 
@@ -43,6 +44,7 @@ class Track
 {
 public:
   Track(float pt, float eta, float phi, float mass, float dzVal);
+  void dump();
   TLorentzVector vec;
   float dz;
 };
@@ -62,6 +64,7 @@ public:
   void generateThetaVals(int n);
   void generatePhiVals(int n);
   void generate(int n);
+  void readHiFile(TString fname, int n=99999999);
   void plotZ();
   void plotTheta();
   void plotPhi();

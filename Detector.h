@@ -20,6 +20,9 @@
 #include "TH2.h"
 #include "TLorentzVector.h"
 #include "TF1.h"
+#include "TPolyMarker3D.h"
+#include "TPolyLine3D.h"
+#include "TH3F.h"
 #include "TCanvas.h"
 #include "TString.h"
 
@@ -46,14 +49,16 @@ public:
   Detector(TString txtFile);
   void drawAscii(vector<Track> *trks=0);
   void draw(vector<Track> *trks=0);
+  void draw3d(vector<Track> *trks=0, float zMinDraw=-1, float zMaxDraw=-1, float rMinDraw=-1, float rMaxDraw=-1, TString option="");
   pair<float,float> findRPhi(float zVal, Track trk);   // find (r,phi) at the given z for this track
   pair<unsigned,unsigned> findClosestChar(float rVal, float zVal);
   int findClosestPixel(float r, float phi, float z);
   void propagateTrack(Track trk);      // figure out which pixels the track hits
   
   vector<float> rVals,phiVals,zVals;   // r,phi coordinates of the centers of the pixels
+  vector<short> markerStyles,markerSizes;
   vector<float> zLayers,phiLayers;     // z/phi coords of each layer
-  vector<bool> isHit;                  // did this pixel get a hit in this event?
+  vector<bool> isHit,isEdge;                  // did this pixel get a hit in this event?
   map<TString,float> minVals,maxVals;  // physical extent of the detector
   int nZ,nR;                           // points for drawing ascii art
   vector<vector<char> > rast;
