@@ -60,8 +60,9 @@ public:
   pair<unsigned,unsigned> findClosestChar(float rVal, float zVal);
   int findClosestPixel(float r, float phi, float z);
   void propagateTrack(Track trk);      // figure out which pixels the track hits
-  vector<float> chooseHits();          // pick a set of hits to pass to the fitter
+  vector<int> chooseHits();          // pick a set of hits to pass to the fitter
   void fitTrack(vector<float> hits);
+  void findAllTracks();
   
   vector<float> rVals,phiVals,zVals;   // r,phi coordinates of the centers of the pixels
   vector<short> markerStyles,markerSizes;
@@ -70,6 +71,7 @@ public:
   map<TString,float> minVals,maxVals;  // physical extent of the detector
   float dR,dS,dZ;                      // pixel-spacings. dR and dS = r*dPhi are the resolutions
   int nZ,nR;                           // points for drawing ascii art
+  vector<int> hitIndices;              // the indices that have hits
   vector<vector<char> > rast;
   int bkgColor,hitColor;  // for plotting
   vector<LineFit*> lines; // collection of fitted lines

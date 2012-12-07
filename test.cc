@@ -54,19 +54,19 @@ int main(int argc, char** argv)
   // Simulator sim(1.5,5,0,0.5);
   Simulator sim(2.5,5,trk.minVals["phi"],trk.maxVals["phi"]);
   // sim.generate(sim.getNTracks());
-  sim.generate(1);
+  sim.generate(5);
   // sim.readHiFile("output_test.root",5);
 
   for(unsigned itrk=0; itrk<sim.event->tracks.size(); itrk++) {
-    sim.event->tracks[itrk].dump();
     trk.propagateTrack(sim.event->tracks[itrk]);
     // tof.propagateTrack(sim.event->tracks[itrk]);
   }
-  trk.fitTrack(trk.chooseHits());
+  trk.findAllTracks();
+  // trk.fitTrack(trk.chooseHits());
 
 
   cout << "drawing" << endl;
-  float zMin(0),zMax(320),rMin(0),rMax(20),xMin(0),xMax(20),yMin(0),yMax(20);
+  float zMin(0),zMax(120),rMin(0),rMax(20),xMin(0),xMax(20),yMin(0),yMax(20);
   // tof.draw3d(&sim.event->tracks,zMin,zMax,rMin,rMax);
   trk.draw3d(&sim.event->tracks,xMin,xMax,yMin,yMax,zMin,zMax);
   can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png");
