@@ -5,7 +5,7 @@ LDFLAGS = `root-config --libs` -L /afs/cern.ch/cms/slc5_amd64_gcc462/lcg/roofit/
 
 LIB = libProject.a
 EXE = test.exe
-OBJ = MitStyleRemix.o EtaPdf_cc.so Simulator.o Detector.o hi.o
+OBJ = MitStyleRemix.o EtaPdf_cc.so Simulator.o Detector.o hi.o LineFit.o
 
 all : lib exe
 exe : $(EXE)
@@ -26,6 +26,9 @@ Detector.o : Detector.cc Detector.h
 
 hi.o : hi.cc hi.h
 	$(CC) $(CCFLAGS) -c hi.cc -o hi.o $(LDFLAGS)
+
+LineFit.o : LineFit.cc LineFit.h
+	$(CC) $(CCFLAGS) -c LineFit.cc -o LineFit.o $(LDFLAGS)
 
 EtaPdf_cc.so : EtaPdf.cc EtaPdf.h
 	root -b -l -q EtaPdf.cc+; ls # without the ls, make thinks the root command fails

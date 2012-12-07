@@ -31,9 +31,11 @@ Simulator::Simulator(float etaMinVal, float etaMaxVal, float phiMinVal, float ph
   zSig  = new RooRealVar("zSig","zSig",3);
   zGaus = new RooGaussian("zGaus","zGaus",*zVar,RooConst(0),*zSig);
   thetaVar = new RooRealVar("thetaVar","thetaVar",theta(etaMax),theta(etaMin));
-  thetaVar->Print();
   etaPdf = new EtaPdf("etaPdf","etaPdf",*thetaVar);
+  phiVar  = new RooRealVar("phiVar","phiVar",phiMin,phiMax);
+  phiPdf = new RooUniform("phiPdf","phiPdf",*phiVar);
   zData = 0;
+  phiData = 0;
   zFrame = 0;
   thetaFrame = 0;
   thetaData = 0;
@@ -55,7 +57,7 @@ void Simulator::generateZVals(int n)
     float val = ((RooRealVar*)(zData->get(ientry)->find("zVar")))->getVal();
     zVals.push_back(val);
   }
-  sort(zVals.begin(), zVals.end());
+  // sort(zVals.begin(), zVals.end());
 }
 //----------------------------------------------------------------------------------------
 void Simulator::generateThetaVals(int n)
@@ -65,14 +67,15 @@ void Simulator::generateThetaVals(int n)
     float val = ((RooRealVar*)(thetaData->get(ientry)->find("thetaVar")))->getVal();
     thetaVals.push_back(val);
   }
-  sort(thetaVals.begin(), thetaVals.end());
+  // sort(thetaVals.begin(), thetaVals.end());
 }
 //----------------------------------------------------------------------------------------
 void Simulator::generatePhiVals(int n)
 {
-  TRandom rand;
-  for(unsigned iphi=0; iphi<n; iphi++) {
-    phiVals.push_back(rand.Uniform(phiMin,phiMax));
+  phiData = phiPdf->generate(*phiVar,n);
+  for(int ientry=0; ientry<phiData->numEntries(); ientry++) {
+    float val = ((RooRealVar*)(phiData->get(ientry)->find("phiVar")))->getVal();
+    phiVals.push_back(val);
   }
 }
 //----------------------------------------------------------------------------------------
@@ -145,8 +148,8 @@ void Simulator::readHiFile(TString fname, int n)
   }
   // sort(zVals.begin(), zVals.end()); // no z vals in the tree yet
   generateZVals(thetaVals.size());
-  sort(thetaVals.begin(), thetaVals.end());
-  sort(phiVals.begin(), phiVals.end());
+  // sort(thetaVals.begin(), thetaVals.end());
+  // sort(phiVals.begin(), phiVals.end());
   for(unsigned itrk=0; itrk<nMax; itrk++) {
     event->tracks.push_back(Track(5, eta(thetaVals[itrk]), phiVals[itrk], 0, zVals[itrk]));
     cout << "pushing track: ";

@@ -1,12 +1,11 @@
 #include "Detector.h"
 
-Detector::Detector(TString txtFile)
+Detector::Detector(TString txtFile) : bkgColor(1),hitColor(632),dR(-1),dS(-1),dZ(-1)
 {
   ifstream ifs(txtFile);
   assert(ifs.is_open());
   string line;
   // note: these deltas are just approximate
-  float dR,dS,dZ; // dS = r*dPhi
   vector<float> tmpRVals,tmpZVals;
   while(getline(ifs,line)) {
     if(line[0]=='#' || line[0]==' ' || line.size()==0) continue;
@@ -18,6 +17,10 @@ Detector::Detector(TString txtFile)
       ss >> dollarSign >> var >> min >> max;
       minVals[var] = min;
       maxVals[var] = max;
+    } else if(line[0]=='s') {
+      // set detector's plotting style
+      TString tmp;
+      ss >> tmp >> bkgColor >> hitColor;
     } else if(line[0]=='d') {
       // make evenly-spaced pixels
       TString tmp;
@@ -49,6 +52,9 @@ Detector::Detector(TString txtFile)
   assert(minVals.find("r") != minVals.end());
   assert(minVals.find("phi") != minVals.end());
   assert(minVals.find("z") != minVals.end());
+  if(dR==-1 && rVals.size()>1)       dR = fabs(rVals[1]   - rVals[0]);
+  if(dS==-1 && phiVals.size()>1)     dS = fabs(rVals[1]*phiVals[1] - rVals[0]*phiVals[0]);
+  if(dZ==-1 && zVals.size()>1)       dZ = fabs(zVals[1]   - zVals[0]);
 
   int nR = int((maxVals["r"] - minVals["r"]) / dR);
   float realDR((maxVals["r"] - minVals["r"]) / nR);
@@ -79,6 +85,7 @@ Detector::Detector(TString txtFile)
 	rVals.push_back(tmpRVals[iR]);
 	zVals.push_back(tmpZVals[iZ]);
 	phiVals.push_back(phiVal);
+	// cout << "pushing: " << setw(12) << rVals.back() << setw(12) << zVals.back() << setw(12) << phiVals.back() << endl;
 	isHit.push_back(false);
 	if(// iZ==0 || iZ==tmpZVals.size()-1 || 
 	   iR==0 || iR==tmpRVals.size()-1 || iPhi==0 || iPhi==nPhi-1)
@@ -144,68 +151,64 @@ pair<unsigned,unsigned> Detector::findClosestChar(float rVal, float zVal)
   return pair<unsigned,unsigned> (iRclose,iZclose);
 }
 //----------------------------------------------------------------------------------------
-void Detector::draw3d(vector<Track> *trks, float zMinDraw, float zMaxDraw, float rMinDraw, float rMaxDraw, TString option)
+void Detector::draw3d(vector<Track> *trks, float xMinDraw, float xMaxDraw, float yMinDraw, float yMaxDraw, float zMinDraw, float zMaxDraw, TString option)
 {
   if(zMinDraw==zMaxDraw) {
     zMinDraw = minVals["z"];
     zMaxDraw = maxVals["z"];
   }
-  if(rMinDraw==rMaxDraw) {
-    rMinDraw = minVals["r"];
-    rMaxDraw = maxVals["r"];
-  }
+  // if(rMinDraw==rMaxDraw) {
+  //   rMinDraw = minVals["r"];
+  //   rMaxDraw = maxVals["r"];
+  // }
   
-  // TCanvas can("can","can",2000,1000);
   if(!option.Contains("same",TString::kIgnoreCase)) {
-    TH3F *hist = new TH3F("hist",";z [cm];x [cm];y [cm]",100,zMinDraw,zMaxDraw,100,rMinDraw*cos(minVals["phi"]),rMaxDraw*cos(maxVals["phi"]),100,rMinDraw*sin(minVals["phi"]),rMaxDraw*sin(maxVals["phi"]));
+    // float xMin = min(rMinDraw*cos(minVals["phi"]),rMinDraw*cos(maxVals["phi"]));
+    // float xMax = max(rMaxDraw*cos(minVals["phi"]),rMaxDraw*cos(maxVals["phi"]));
+    // float yMin = min(rMinDraw*sin(minVals["phi"]),rMinDraw*sin(maxVals["phi"]));
+    // float yMax = max(rMaxDraw*sin(minVals["phi"]),rMaxDraw*sin(maxVals["phi"]));
+    TH3F *hist = new TH3F("hist",";x [cm];y [cm];z [cm]",100,xMinDraw,xMaxDraw,100,yMinDraw,yMaxDraw,100,zMinDraw,zMaxDraw);
     hist->SetDirectory(0);
     hist->Draw();
   }
   for(unsigned iPix=0; iPix<rVals.size(); iPix++) {
     if(!isEdge[iPix] && !isHit[iPix]) continue;
     float *coords = new float[3];
-    coords[0] = zVals[iPix];
-    // coords[1] = phiVals[iPix];
-    // coords[2] = rVals[iPix];
-    coords[1] = rVals[iPix]*cos(phiVals[iPix]);
-    coords[2] = rVals[iPix]*sin(phiVals[iPix]);
+    coords[0] = rVals[iPix]*cos(phiVals[iPix]);
+    // cout << setw(12) << rVals[iPix] << setw(12) << phiVals[iPix] << setw(12) << rVals[iPix]*cos(phiVals[iPix])
+    // 	 << setw(12) << rVals[iPix]*sin(phiVals[iPix]) << endl;
+    coords[1] = rVals[iPix]*sin(phiVals[iPix]);
+    coords[2] = zVals[iPix];
     TPolyMarker3D *mark = new TPolyMarker3D(3,coords,20);
     if(isHit[iPix])
-      mark->SetMarkerColor(kRed);
+      mark->SetMarkerColor(hitColor);
+    else
+      mark->SetMarkerColor(bkgColor);
     mark->Draw();
   }
   if(trks) {
     for(unsigned itrk=0; itrk<trks->size(); itrk++) {
-      // pair<float,float> loPair(findRPhi(zMinDraw, (*trks)[itrk]));
       pair<float,float> loPair(findRPhi((*trks)[itrk].dz, (*trks)[itrk]));
       pair<float,float> hiPair(findRPhi(zMaxDraw, (*trks)[itrk]));
       float *coords = new float[3];
-      // coords[0] = zMinDraw;
-      coords[0] = (*trks)[itrk].dz;
-      coords[1] = loPair.first*cos(loPair.second);
-      coords[2] = loPair.first*sin(loPair.second);
-      coords[3] = zMaxDraw;
-      coords[4] = hiPair.first*cos(hiPair.second);
-      coords[5] = hiPair.first*sin(hiPair.second);
-      // cout
-      // 	<< "drawing line with: "
-      // 	<< setw(12) << coords[0]
-      // 	<< setw(12) << coords[1]
-      // 	<< setw(12) << coords[2]
-      // 	<< setw(12) << coords[3]
-      // 	<< setw(12) << coords[4]
-      // 	<< setw(12) << coords[5]
-      // 	<< endl;
+      coords[0] = loPair.first*cos(loPair.second);
+      coords[1] = loPair.first*sin(loPair.second);
+      coords[2] = (*trks)[itrk].dz;
+      coords[3] = hiPair.first*cos(hiPair.second);
+      coords[4] = hiPair.first*sin(hiPair.second);
+      coords[5] = zMaxDraw;
       TPolyLine3D *line = new TPolyLine3D(2,coords);
       line->SetLineColor(kBlue);
+      line->SetLineWidth(2);
       line->Draw();
     }
   }
-  // cout << "saving..." << endl;
-  // can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png");
-  // cout << "saved..." << endl;
+  for(unsigned iline=0; iline<lines.size(); iline++) {
+    lines[iline]->line->SetLineColor(kRed+1);
+    lines[iline]->line->SetLineWidth(2);
+    lines[iline]->line->Draw("same");
+  }
 }
-  
 //----------------------------------------------------------------------------------------
 void Detector::draw(vector<Track> *trks)
 {
@@ -297,6 +300,7 @@ void Detector::drawAscii(vector<Track> *trks)
 }
 //----------------------------------------------------------------------------------------
 pair<float,float> Detector::findRPhi(float zVal, Track trk)
+// find r,phi coordinates of a track for a given z (note: may not be correct for negative z)
 {
   pair<float,float> coords;
   // cout << "finding r,phi for z: " << zVal << " and ";
@@ -309,6 +313,7 @@ pair<float,float> Detector::findRPhi(float zVal, Track trk)
 }
 //----------------------------------------------------------------------------------------
 void Detector::propagateTrack(Track trk)
+// figure out which pixels in each z layer the track hits
 {
   for(unsigned ilayer=0; ilayer<zLayers.size(); ilayer++) {
     // cout << "layer: " << ilayer << endl;
@@ -323,5 +328,28 @@ void Detector::propagateTrack(Track trk)
     }
   }
 }
-		    
-      
+//----------------------------------------------------------------------------------------
+vector<float> Detector::chooseHits()
+{
+  vector<float> hits;
+  for(unsigned iPix=0; iPix<rVals.size(); iPix++) {
+    if(isHit[iPix]) {
+      // hits.push_back(zVals[iPix]);                     // z
+      // hits.push_back(rVals[iPix]*cos(phiVals[iPix]));  // x
+      // hits.push_back(rVals[iPix]*sin(phiVals[iPix]));  // y
+      hits.push_back(rVals[iPix]*cos(phiVals[iPix]));  // x
+      hits.push_back(rVals[iPix]*sin(phiVals[iPix]));  // y
+      hits.push_back(zVals[iPix]);                     // z
+      // cout << "pushing hit: " << setw(12) << zVals[iPix] << setw(12) << rVals[iPix]*cos(phiVals[iPix]) << setw(12) << rVals[iPix]*sin(phiVals[iPix]) << endl;
+    }
+  }
+  return hits;
+}
+//----------------------------------------------------------------------------------------
+void Detector::fitTrack(vector<float> hits)
+{
+  LineFit *lf = new LineFit(hits);
+  lf->fit();
+  lines.push_back(lf);
+  cout << "chi sqaure (?): " << lf->getChiSquare(dR,dS) << endl;
+}

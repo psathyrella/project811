@@ -26,6 +26,7 @@
 #include "RooFFTConvPdf.h"
 #include "RooRealVar.h"
 #include "RooGaussian.h"
+#include "RooUniform.h"
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 #include "RooHistPdf.h"
@@ -74,10 +75,11 @@ public:
 
   Event *event;
   float etaMin,etaMax,phiMin,phiMax;
-  RooRealVar *zVar,*zSig,*thetaVar;
+  RooRealVar *zVar,*zSig,*thetaVar,*phiVar;
   RooGaussian *zGaus;
+  RooUniform *phiPdf;
   EtaPdf *etaPdf;
-  RooDataSet *zData,*thetaData;
+  RooDataSet *zData,*thetaData,*phiData;
   RooPlot *zFrame,*thetaFrame;
   vector<float> zVals,thetaVals,phiVals;
 };
