@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 
   Simulator sim(2.5,4.5,trk.minVals["phi"],trk.maxVals["phi"]);
   // sim.generate(sim.getNTracks());
-  sim.generate(100);
+  sim.generate(5);
   // sim.readHiFile("output_test.root",5);
 
   for(unsigned itrk=0; itrk<sim.event->tracks.size(); itrk++) {
@@ -70,4 +70,5 @@ int main(int argc, char** argv)
   trk.draw3d(&sim.event->tracks,xMin,xMax,yMin,yMax,zMin,zMax);
   cout << "saving" << endl;
   // can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png"); // note: almost all the cpu time is spent rendering the 3d image when you save the canvas...
+  can.SaveAs("foo.png"); // note: almost all the cpu time is spent rendering the 3d image when you save the canvas...
 }
