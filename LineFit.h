@@ -26,6 +26,7 @@ public:
   LineFit(vector<float> vals);              // list of x,y,z coords
   void fit();
   float getChiSquare(float dR, float dS);
+  float closestApproachToZAxis(float zMin=-50, float zMax=400, float dz=10);
 
   TGraph2D gr;
   TVirtualFitter *min;

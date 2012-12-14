@@ -28,7 +28,7 @@ Simulator::Simulator(float etaMinVal, float etaMaxVal, float phiMinVal, float ph
   phiMax = phiMaxVal;
 
   zVar  = new RooRealVar("zVar","zVar",-20,20);
-  zSig  = new RooRealVar("zSig","zSig",3);
+  zSig  = new RooRealVar("zSig","zSig",5);
   zGaus = new RooGaussian("zGaus","zGaus",*zVar,RooConst(0),*zSig);
   thetaVar = new RooRealVar("thetaVar","thetaVar",theta(etaMax),theta(etaMin));
   etaPdf = new EtaPdf("etaPdf","etaPdf",*thetaVar);

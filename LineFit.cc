@@ -131,3 +131,40 @@ float LineFit::getChiSquare(float dR, float dS)
   // cout << "ndof: " << ndof << endl;
   return sqrt(sum) / ndof;
 }
+//----------------------------------------------------------------------------------------
+float LineFit::closestApproachToZAxis(float zMin, float zMax, float dz)
+// return the z at which the line passes closest to the z axis
+{
+  float nDzStart(10);         // divide the interval into this many pieces
+  float lastDz(zMax-zMin);    // the last step size that was tried
+  int nTries(0),nTriesMax(3);
+  float minDistance(99999999999999);
+  float bestZ(zMin);
+  float zMinTry(zMin),zMaxTry(zMax);
+  while(nTries<nTriesMax && lastDz>dz) { // give up when the step size gets smaller than dz or we've already tried nTriesMax times
+    float tmpMinDistance(minDistance);
+    float tmpBestZ(bestZ);
+    for(float zTry=zMinTry; zTry<zMaxTry+(zMaxTry-zMinTry)/nDzStart; zTry += (zMaxTry-zMinTry)/nDzStart) {
+      float distance(sqrt(distance2(0, 0, zTry, parFit))); // minimum distance from the z-axis at zTry to the line
+      // cout << "closestApproachToZAxis   trying: " << zTry << setw(12) << distance << endl;
+      if(distance < tmpMinDistance) {
+	tmpMinDistance = distance;
+	tmpBestZ = zTry;
+      }
+    }
+    // cout << "closestApproachToZAxis   best for this loop: " << tmpMinDistance << setw(12) << tmpBestZ << endl;
+    if(tmpMinDistance <= minDistance) {
+      minDistance = tmpMinDistance;
+      bestZ = tmpBestZ;
+      zMinTry = bestZ - 1*(zMaxTry-zMinTry)/nDzStart; // set new limits to +/- two intervals
+      zMaxTry = bestZ + 1*(zMaxTry-zMinTry)/nDzStart;
+      // cout << "closestApproachToZAxis   setting best" << setw(12) << zMinTry << setw(12) << zMaxTry << endl;
+    }
+
+    nTries++;
+    lastDz = (zMax-zMin)/nDzStart;
+  }
+  // cout << "closestApproachToZAxis returning: " << setw(12) << bestZ << setw(12) << minDistance << endl;
+  return bestZ;
+}
+    

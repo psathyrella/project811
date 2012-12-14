@@ -46,15 +46,13 @@ int main(int argc, char** argv)
   gPad->SetLeftMargin(.15);
   gPad->SetBottomMargin(.15);
   SetStyle();
-  cout << can.GetPhi() << " " << can.GetTheta() << endl;
 
   Detector trk("tracker.txt");
   // Detector tof("tof.txt");
 
-  // Simulator sim(1.5,5,0,0.5);
-  Simulator sim(2.5,5,trk.minVals["phi"],trk.maxVals["phi"]);
+  Simulator sim(2.5,4.5,trk.minVals["phi"],trk.maxVals["phi"]);
   // sim.generate(sim.getNTracks());
-  sim.generate(5);
+  sim.generate(100);
   // sim.readHiFile("output_test.root",5);
 
   for(unsigned itrk=0; itrk<sim.event->tracks.size(); itrk++) {
@@ -64,11 +62,12 @@ int main(int argc, char** argv)
   trk.findAllTracks();
   // trk.fitTrack(trk.chooseHits());
 
+  trk.calcResolution(sim.event->tracks);
 
-  cout << "drawing" << endl;
-  float zMin(0),zMax(120),rMin(0),rMax(20),xMin(0),xMax(20),yMin(0),yMax(20);
+  float zMin(0),zMax(290),rMin(0),rMax(20),xMin(0),xMax(20),yMin(0),yMax(20);
   // tof.draw3d(&sim.event->tracks,zMin,zMax,rMin,rMax);
+  cout << "drawing" << endl;
   trk.draw3d(&sim.event->tracks,xMin,xMax,yMin,yMax,zMin,zMax);
-  can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png");
-
+  cout << "saving" << endl;
+  // can.SaveAs("/afs/cern.ch/user/d/dkralph/www/foo.png"); // note: almost all the cpu time is spent rendering the 3d image when you save the canvas...
 }

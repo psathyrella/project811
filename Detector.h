@@ -60,9 +60,10 @@ public:
   pair<unsigned,unsigned> findClosestChar(float rVal, float zVal);
   int findClosestPixel(float r, float phi, float z);
   void propagateTrack(Track trk);      // figure out which pixels the track hits
-  vector<int> chooseHits();          // pick a set of hits to pass to the fitter
+  vector<int> chooseHits(int iStartLayer=0, bool useBeamSpotConstraint=false);          // pick a set of hits to pass to the fitter
   void fitTrack(vector<float> hits);
   void findAllTracks();
+  void calcResolution(vector<Track> tracks);
   
   vector<float> rVals,phiVals,zVals;   // r,phi coordinates of the centers of the pixels
   vector<short> markerStyles,markerSizes;

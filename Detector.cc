@@ -327,87 +327,107 @@ void Detector::propagateTrack(Track trk)
   }
 }
 //----------------------------------------------------------------------------------------
-vector<int> Detector::chooseHits()
+vector<int> Detector::chooseHits(int iStartLayer, bool useBeamSpotConstraint)
 {
   vector<LineFit> lfs;
   vector<int> hit1s,hit2s,hit3s; // hits in the first, second, and third layers for each LineFit
-  // loop over all the hits in the first layer
-  double minChi2(99999);
-  int iBestLine(-1);
+  // loop over all the hits in iStartLayer
   for(unsigned ihit=0; ihit<hitIndices.size(); ihit++) {
     int hit1(hitIndices[ihit]);
-    if(zVals[hit1] != zLayers[0]) continue;
-    // double minChi2(99999);
-    // int iBestLine(-1);
-    // cout << "ihit with: " << setw(12) << rVals[hit1] << setw(12) << zVals[hit1] << endl;
-    // loop over all the hits in the second layer
+    if(zVals[hit1] != zLayers[iStartLayer]) continue;
+    // loop over all the hits in the next layer
     for(unsigned jhit=0; jhit<hitIndices.size(); jhit++) {
       int hit2(hitIndices[jhit]);
-      if(zVals[hitIndices[jhit]] != zLayers[1]) continue;
-      // cout << "  jhit with: " << setw(12) << rVals[hitIndices[jhit]] << setw(12) << zVals[hitIndices[jhit]] << endl;
-      // loop over all the hits in the third layer
-      for(unsigned khit=0; khit<hitIndices.size(); khit++) {
-	int hit3(hitIndices[khit]);
-	if(zVals[hitIndices[khit]] != zLayers[2]) continue;
-	// cout << "    khit with: " << setw(12) << rVals[hitIndices[khit]] << setw(12) << zVals[hitIndices[khit]] << endl;
-	vector<float> hits;
-	hits.push_back(rVals[hit1]*cos(phiVals[hit1]));  // x
-	hits.push_back(rVals[hit1]*sin(phiVals[hit1]));  // y
-	hits.push_back(zVals[hit1]);                     // z
-	hits.push_back(rVals[hit2]*cos(phiVals[hit2]));  // x
-	hits.push_back(rVals[hit2]*sin(phiVals[hit2]));  // y
-	hits.push_back(zVals[hit2]);                     // z
-	hits.push_back(rVals[hit3]*cos(phiVals[hit3]));  // x
-	hits.push_back(rVals[hit3]*sin(phiVals[hit3]));  // y
-	hits.push_back(zVals[hit3]);                     // z
-	// fitTrack(hits);
+      if(zVals[hitIndices[jhit]] != zLayers[iStartLayer+1]) continue;
+
+      vector<float> hits;
+      if(useBeamSpotConstraint) {
+	hits.push_back(0);  // hacky beam-spot constraint
+	hits.push_back(0);
+	hits.push_back(0);
+      }
+      hits.push_back(rVals[hit1]*cos(phiVals[hit1]));  // x
+      hits.push_back(rVals[hit1]*sin(phiVals[hit1]));  // y
+      hits.push_back(zVals[hit1]);                     // z
+      hits.push_back(rVals[hit2]*cos(phiVals[hit2]));  // x
+      hits.push_back(rVals[hit2]*sin(phiVals[hit2]));  // y
+      hits.push_back(zVals[hit2]);                     // z
+
+      int nToAssert(useBeamSpotConstraint ? 9 : 6);
+      if(iStartLayer > zLayers.size()-3) { // if there's only two layers left
+	assert(hits.size()==nToAssert);
 	LineFit lf(hits);
 	lf.fit();
-	double chi2(lf.getChiSquare(dR,dS));
-	// cout << "      chi2: " << chi2 << endl;
 	lfs.push_back(lf);
 	hit1s.push_back(hit1);
 	hit2s.push_back(hit2);
-	hit3s.push_back(hit3);
-	if(chi2 < minChi2) {
-	  iBestLine = lfs.size() - 1;
-	  minChi2 = chi2;
-	  // cout << "          setting min chi2: " << lfs.size() - 1 << endl;
+	hit3s.push_back(-1);
+      } else { // if there's three or more layers left
+	// loop over all the hits in the next next layer
+	for(unsigned khit=0; khit<hitIndices.size(); khit++) {
+	  int hit3(hitIndices[khit]);
+	  if(zVals[hitIndices[khit]] != zLayers[iStartLayer+2]) continue;
+	  
+	  if(hits.size() > nToAssert) hits.pop_back();
+	  if(hits.size() > nToAssert) hits.pop_back();
+	  if(hits.size() > nToAssert) hits.pop_back();
+	  assert(hits.size() == nToAssert);
+	  hits.push_back(rVals[hit3]*cos(phiVals[hit3]));  // x
+	  hits.push_back(rVals[hit3]*sin(phiVals[hit3]));  // y
+	  hits.push_back(zVals[hit3]);                     // z
+
+	  LineFit lf(hits);
+	  lf.fit();
+	  lfs.push_back(lf);
+	  hit1s.push_back(hit1);
+	  hit2s.push_back(hit2);
+	  hit3s.push_back(hit3);
 	}
-	// if(chi2 < minChi2) {
-	//   iBestLine = lfs.size() - 1;
-	//   minChi2 = chi2;
-	//   cout << "          setting min chi2: " << lfs.size() - 1 << endl;
-	// }
       }
     }
-    // if(iBestLine>=0) {
-    //   LineFit *lfBest = new LineFit(lfs[iBestLine]);
-    //   lines.push_back(lfBest);
-    // }
   }
-  cout << "best chi2: " << iBestLine << endl;
+
+  // find the best line
+  double minChi2(99999);
+  int iBestLine(-1);
+  for(unsigned ilf=0; ilf<lfs.size(); ilf++) {
+    
+    // require closest distance to z axis to be small
+    float zAtClosest = lfs[ilf].closestApproachToZAxis();
+    float dzMax = (iStartLayer > zLayers.size()-3) ? 50 : 15; // use looser constraint if we've only got two hits to work with
+    if(fabs(zAtClosest) > dzMax) {
+      cout << "  dz too large: " << zAtClosest << endl;
+      continue;
+    }
+
+    // require dxy at z=0 to be small
+    double x,y,z;
+    float dxyMax = (iStartLayer > zLayers.size()-3) ? 8 : 1.5; // use looser constraint if we've only got two hits to work with
+    lineFcn(0, lfs[ilf].parFit, x, y, z);
+    if(sqrt(x*x + y*y) > 2.5) {
+      cout << " dxy too large: " << sqrt(x*x + y*y) << endl;
+      continue;
+    }
+
+    double chi2(lfs[ilf].getChiSquare(dR,dS));
+    if(chi2 < minChi2) {
+      iBestLine = ilf;
+      minChi2 = chi2;
+    }
+  }
 
   vector<int> hitsOfBestLine;
   if(iBestLine>=0) {
     LineFit *lfBest = new LineFit(lfs[iBestLine]);
+    cout << "smallest dz: " << lfBest->closestApproachToZAxis() << endl;
     lines.push_back(lfBest);
     hitsOfBestLine.push_back(hit1s[iBestLine]);
     hitsOfBestLine.push_back(hit2s[iBestLine]);
-    hitsOfBestLine.push_back(hit3s[iBestLine]);
+    if(hit3s[iBestLine] >= 0)
+      hitsOfBestLine.push_back(hit3s[iBestLine]);
   }
 
   return hitsOfBestLine;
-
-  // vector<float> hits;
-  // for(unsigned iPix=0; iPix<rVals.size(); iPix++) {
-  //   if(isHit[iPix]) {
-  //     hits.push_back(rVals[iPix]*cos(phiVals[iPix]));  // x
-  //     hits.push_back(rVals[iPix]*sin(phiVals[iPix]));  // y
-  //     hits.push_back(zVals[iPix]);                     // z
-  //   }
-  // }
-  // return hits;
 }
 //----------------------------------------------------------------------------------------
 void Detector::fitTrack(vector<float> hits)
@@ -415,21 +435,27 @@ void Detector::fitTrack(vector<float> hits)
   LineFit *lf = new LineFit(hits);
   lf->fit();
   lines.push_back(lf);
-  // cout << "chi sqaure (?): " << lf->getChiSquare(dR,dS) << endl;
 }
 //----------------------------------------------------------------------------------------
 void Detector::findAllTracks()
 {
+  int iStartLayer(0);
   while(hitIndices.size() > 0) {
-    cout << "hitIndices before: " << hitIndices.size() << endl;
-    vector<int> hitsOfBestLine(chooseHits()); // find the three hits that fit to the best line
+    cout << "layer: " << iStartLayer << " hitIndices before: " << hitIndices.size() << endl;
+    vector<int> hitsOfBestLine(chooseHits(iStartLayer)); // find the three hits that fit to the best line
     
     if(hitsOfBestLine.size() != 3) {
-      cout << "no more lines!" << endl;
-      break;
+      if(iStartLayer < zLayers.size() - 1) {
+	iStartLayer++;
+	continue;
+      } else {
+	cout << "no more lines!" << endl;
+	break;
+      }
     }
 	
     // remove them from hitIndices
+    assert(hitIndices.size()>2);
     for(unsigned ih=0; ih<hitIndices.size(); ih++)
       if(hitIndices[ih] == hitsOfBestLine[0])
 	hitIndices.erase(hitIndices.begin()+ih);
@@ -442,17 +468,58 @@ void Detector::findAllTracks()
       if(hitIndices[ih] == hitsOfBestLine[2])
 	hitIndices.erase(hitIndices.begin()+ih);
 
-    // vector<vector<int>::iterator > hitsToErase;
-    // for(vector<int>::iterator it=hitIndices.begin(); it!=hitIndices.end(); it++) {
-    //   if((*it) == hitsOfBestLine[0] || (*it) == hitsOfBestLine[1] || (*it) == hitsOfBestLine[2]) {
-    // 	cout << "iterator: " << (*it) << endl;
-    // 	hitsToErase.push_back(it);
-    //   }
-    // }
-    // for(unsigned ierase=0; ierase<hitsToErase.size(); ierase++) {
-    //   cout << "    erasing: " << ierase << endl;
-    //   hitIndices.erase(hitsToErase[ierase]);
-    // }
-    // cout << "hitIndices after: " << hitIndices.size() << endl;
   }
+}
+//----------------------------------------------------------------------------------------
+void Detector::calcResolution(vector<Track> tracks)
+{
+  vector<int> foundTracks,usedLines; // find the best match, then remove this line and track, the next best...
+  vector<float> distances;
+  while(foundTracks.size() < tracks.size()) {
+    float minDistance(999999);
+    int iMatchTrk(-1),iMatchLine(-1);
+    for(unsigned itrk=0; itrk<tracks.size(); itrk++) { // find the fitted line that comes closest to the track's origin
+      bool alreadyFound(false);
+      for(unsigned iFoundTrk=0; iFoundTrk<foundTracks.size(); iFoundTrk++)
+	if(itrk == foundTracks[iFoundTrk])
+	  alreadyFound = true;
+      if(alreadyFound)
+	continue;
+	    
+      for(unsigned iline=0; iline<lines.size(); iline++) {
+	bool alreadyUsed(false);
+	for(unsigned iUsedLine=0; iUsedLine<usedLines.size(); iUsedLine++)
+	  if(iline == usedLines[iUsedLine])
+	    alreadyUsed = true;
+	if(alreadyUsed)
+	  continue;
+
+	float distance(sqrt(distance2(0, 0, tracks[itrk].dz, lines[iline]->parFit)));
+	if(distance < minDistance) {
+	  minDistance = distance;
+	  iMatchTrk = itrk;
+	  iMatchLine = iline;
+	  // cout << "  set min to: " << setw(12) << minDistance << setw(12) << iMatchTrk << setw(12) << iMatchLine << endl;
+	}
+      }
+    }
+    // assert(iMatchTrk >= 0);
+    // assert(iMatchLine >= 0);
+    if(iMatchTrk < 0 || iMatchLine < 0) {
+      cout << "out of tracks or lines" << endl;
+      break;
+    }
+    foundTracks.push_back(iMatchTrk);
+    usedLines.push_back(iMatchLine);
+    distances.push_back(minDistance);
+    // cout << "pushed back: " << distances.back() << setw(12) << iMatchTrk << setw(12) << iMatchLine << endl;
+  }
+
+  cout << "distances of " << distances.size() << " tracks" << endl;
+  double sum(0);
+  for(unsigned idist=0; idist<distances.size(); idist++) {
+    cout << setw(12) << distances[idist] << endl;
+    sum += distances[idist];
+  }
+  cout << "  mean: " << sum / distances.size() << endl;
 }
